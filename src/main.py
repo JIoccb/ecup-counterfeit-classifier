@@ -14,12 +14,15 @@ raw = pd.read_csv(filename)
 result_arr = []
 
 for index, row in raw.iterrows():
-    text = row["description"]
+    description = row["description"]
+    name = row["name_rus"]
+    text = str(name) + " " + str(description)
+
     # image = Image.open(image_folder + "/" + str(row["ItemID"]))
     image = None
 
     text_prob = text_analyze.predict(text)
-    image_prob = text_analyze.predict(image)
+    image_prob = image_analyze.predict(image)
 
     # random forest
     result_prob = max(text_prob, image_prob)
