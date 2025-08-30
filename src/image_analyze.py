@@ -1,10 +1,11 @@
-import numpy as np
+
 from PIL import Image
 import torch
 
-
-def predict(img: Image, model, preprocess):
-    processed = preprocess(img).unsqueeze(0)
-
-    with torch.no_grad():
-        return model(processed)
+@torch.inference_mode()
+def predict(img: Image.Image, model, preprocess, device: str = "cpu", pos_index: int = -1) -> float:
+    x = preprocess(img).unsqueeze(0).to(device)
+    model = model.to(device).eval()
+    logits = model(x)
+    probs = torch.nn.functional.softmax(logits, dim=1)
+    return probs[0, pos_index].item()
