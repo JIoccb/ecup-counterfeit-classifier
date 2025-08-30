@@ -2,6 +2,7 @@ import numpy as np
 import re
 import unicodedata
 import pymorphy3
+import torch
 
 def clean_text(text: str):
     text = re.sub(r'&.+;', '', text)
@@ -19,6 +20,13 @@ def lemmatize_text(text: str):
     return ' '.join(lemmatized_tokens)
 
 
-def predict(text: str):
+def predict(text: str, model, tokenizer, max_length: int):
     preprocessed_text = lemmatize_text(text)
-    return 0
+    inputs = tokenizer(preprocessed_text, padding="max_length", truncation=True, max_length=max_length, return_tensors="pt")
+
+    with torch.no_grad():
+        output = model(**inputs)
+
+    probs = torch.nn.functional.softmax(output.logits, dim=-1)
+
+    return probs.squeeze().tolist()[-1]
