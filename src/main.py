@@ -10,8 +10,9 @@ import text_analyze
 import image_analyze
 
 filename = "./data/data.csv"
-
 image_folder = "./data/imgs"
+
+enable_ocr = True
 
 ### TEXT MODEL
 
@@ -48,6 +49,8 @@ for index, row in raw.iterrows():
     description = row["description"]
     name = row["name_rus"]
     text = str(name) + " " + str(description)
+    if enable_ocr:
+        text += " " + image_analyze.perform_ocr(os.path.join(image_folder, str(row["ItemID"])) + ".png")
 
     # image = Image.open(os.path.join(image_folder, str(row["ItemID"])))
     image = Image.open(os.path.join(image_folder, "100481.png")) # CHANGE THISSSSSS
