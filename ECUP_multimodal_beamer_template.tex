@@ -1,0 +1,267 @@
+
+% ============================================================
+% Мультимодальная детекция контрафакта — шаблон Beamer (≤15 слайдов)
+% Компиляция: pdflatex (UTF-8). Замените плейсхолдеры и изображения.
+% ============================================================
+\documentclass[aspectratio=169,10pt]{beamer}
+
+% ------------------ Пакеты и настройки ----------------------
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=russian,english]{babel}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\usetheme{Madrid}            % Надежная тема из базовой поставки
+\usecolortheme{default}
+
+% Цвета модальностей (при желании подберите под фирстиль)
+\definecolor{CVColor}{RGB}{26,115,232}   % синий
+\definecolor{NLPColor}{RGB}{15,157,88}   % зелёный
+\definecolor{TABColor}{RGB}{244,180,0}   % оранжевый
+
+\newcommand{\cv}[1]{\textcolor{CVColor}{#1}}
+\newcommand{\nlp}[1]{\textcolor{NLPColor}{#1}}
+\newcommand{\tabmod}[1]{\textcolor{TABColor}{#1}}
+
+% Полезные шорткаты
+\newcommand{\projectname}{Мультимодальная детекция контрафакта}
+\newcommand{\teamroles}{DS/ML, CV/NLP, MLE, DevOps, PM}
+\newcommand{\oneLiner}{Снижаем риски и возвраты за счёт точной классификации товара}
+\newcommand{\kpi}[2]{\textbf{#1}: #2} % пример: \kpi{F1 на проде}{≥ 0.78}
+
+% Нижний колонтитул с названием проекта
+\setbeamertemplate{footline}[frame number]
+\setbeamertemplate{navigation symbols}{}
+
+% ------------------ Метаданные -------------------------------
+\title{Контроль качества: автоматическое выявление поддельных товаров}
+%\author{Команда: \teamroles}
+\date{\today}
+
+% ============================================================
+\begin{document}
+
+% ------------------ 1) Титульный ----------------------------
+\begin{frame}
+  \titlepage
+  % при желании добавьте логотип:
+  % \begin{picture}(0,0)
+  %   \put(320,-200){\includegraphics[width=2.2cm]{path/to/logo.pdf}}
+  % \end{picture}
+\end{frame}
+
+% ------------------ 2) Проблема и ценность -------------------
+\begin{frame}{Проблема и бизнес-ценность}
+\begin{itemize}
+  \item Контрафакт \textrightarrow{} финансовые потери, репутационные риски, санкции.
+  \item Где используем модель: модерация листингов, пост-проверки, выборочный аудит.
+  \item Цели внедрения:
+    \begin{itemize}
+      \item \kpi{F1 на проде}{\textit{целевое значение}};
+      \item \kpi{Снижение ручной модерации}{\textit{целевой \%}};
+      \item \kpi{Скорость проверки / листинг}{\textit{целевое время}}.
+    \end{itemize}
+  \item Метрики успеха и точки интеграции в процесс.
+\end{itemize}
+\medskip
+\textit{Визуал:} мини-схема бизнес-процесса «до/после», 2–3 KPI.
+\end{frame}
+
+% ------------------ 3) Постановка задачи --------------------
+\begin{frame}{Постановка задачи}
+\begin{itemize}
+  \item Бинарная классификация: \textbf{original (0)} / \textbf{counterfeit (1)}.
+  \item Объект предсказания: товар (\texttt{id}).
+  \item Выход: \texttt{submission.csv} формата \texttt{id,prediction} (0/1).
+  \item Оценка: \textbf{F1-score} на скрытом тесте.
+  \item Ограничения: время инференса, размер модели, интерпретируемость.
+\end{itemize}
+\medskip
+%\textit{Визуал:} «входы \textrightarrow{} модель \textrightarrow{} csv».
+\end{frame}
+
+% ------------------ 4) Данные и модальности -----------------
+\begin{frame}{Данные и модальности}
+\begin{itemize}
+  \item Табличные признаки: категории, бренд, цена, продавец, метрики листинга.
+  \item Текст: заголовок, описание, атрибуты (\nlp{NLP}).
+  \item Изображения: 1–N фото/листинг (\cv{CV}).
+  \item Разметка: целевая метка \texttt{resolution} только в train.
+  \item Сложности: дисбаланс классов, дубликаты, шумная разметка.
+  \item Политика сплита: без утечек (группы по seller/brand/item).
+\end{itemize}
+\medskip
+\textit{Визуал:} три иконки модальностей с краткими примерами.
+\end{frame}
+
+% ------------------ 5) Архитектура решения ------------------
+\begin{frame}{Архитектура решения (обзор)}
+\begin{itemize}
+  \item Препроцессинг по модальностям \textrightarrow{} энкодеры (\cv{CV}/\nlp{NLP}/\tabmod{Tabular}).
+  %\item Фьюжн представлений (mid/late) \textrightarrow{} мета-классификатор.
+  \item Калибровка вероятностей + подбор порога по F1.
+  %\item Инференс батчами \textrightarrow{} \texttt{submission.csv}.
+  \item Кэширование эмбеддингов, логирование, мониторинг.
+\end{itemize}
+\medskip
+\textit{Визуал:} блок-схема пайплайна с потоками данных.
+\end{frame}
+
+% ------------------ 6) Подготовка данных --------------------
+\begin{frame}{Подготовка данных}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.5\textwidth}
+\textbf{Табличные (\tabmod{Tabular})}
+\begin{itemize}
+  \item Очистка, нормализация.
+\end{itemize}
+\textbf{Изображения (\cv{CV})}
+\begin{itemize}
+  \item Resize, Crop, Flip, Color Jitter; нормализация.
+  \item Контроль качества, near-dup детекция.
+\end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+\textbf{Текст (\nlp{NLP})}
+\begin{itemize}
+  \item Нормализация, токенизация, max\_len/усечение.
+  \item Мультиязычность, спецсимволы.
+\end{itemize}
+\textbf{Дисбаланс}
+\begin{itemize}
+  \item Class weights / oversampling / focal loss.
+\end{itemize}
+\end{column}
+\end{columns}
+\medskip
+\textit{Визуал:} примеры аугментаций; таблица «до/после».
+\end{frame}
+
+% ------------------ 7) Базовые модели -----------------------
+\begin{frame}{Базовые модели по модальностям}
+\begin{itemize}
+  \item \tabmod{Tabular}: HistGradient Boost + OOF
+  \item \nlp{Text}: 
+  \item \cv{Vision}: CLIP
+  \item Выход веток: эмбеддинг фиксированного размера + логит.
+  \item Критерии выбора: баланс качества/скорости/ресурсов.
+\end{itemize}
+\medskip
+\textit{Визуал:} три карточки моделей с ключевыми спеками.
+\end{frame}
+
+% ------------------ 8) Фьюжн / объединение ------------------
+\begin{frame}{Фьюжн / объединение представлений}
+\begin{itemize}
+  \item Подходы: \textbf{late} (взвешенные логиты), \textbf{mid} (конкат эмбеддингов \textrightarrow{} MLP), \textbf{stacking} (OOF \textrightarrow{} мета-модель).
+  \item Выбор: \textbf{mid-level фьюжн} — [$\cv{\mathbf{e}_{cv}} \| \nlp{\mathbf{e}_{txt}} \| \tabmod{\mathbf{e}_{tab}}$] \textrightarrow{} MLP/Attention.
+  \item Маскирование при отсутствии модальности; нормализация.
+  \item Регуляризация
+  \item Абляции: вклад модальностей, чувствительность к пропускам.
+\end{itemize}
+\medskip
+\textit{Визуал:} слой фьюжна с размерами векторов.
+\end{frame}
+
+% ------------------ 9) Валидация и калибровка ---------------
+\begin{frame}{Валидация и калибровка}
+\begin{itemize}
+  \item CV: Stratified K-Fold + GroupKFold (seller/brand) для защиты от утечек.
+  \item Метрики: F1, precision/recall, PR-AUC по фолдам.
+  \item Порог: подбираем по максимальному F1 на OOF; калибровка (Isotonic/Platt/Temp).
+  \item Стабильность: разброс по фолдам, bootstrap доверительные интервалы.
+\end{itemize}
+\medskip
+\textit{Визуал:} PR-кривая, график F1 vs threshold.
+\end{frame}
+
+% ------------------ 10) Результаты (оффлайн) ----------------
+\begin{frame}{Результаты (оффлайн)}
+\begin{itemize}
+  \item Сводка по фолдам: mean$\pm$std F1; лучшая конфигурация.
+  \item Матрица ошибок; вклад модальностей (CV/TXT/TAB/фьюжн).
+  \item Производительность: tps/batch, VRAM/память, время на 1000 товаров.
+\end{itemize}
+\medskip
+\textit{Визуал:} бар-чарт вкладов, confusion matrix, таблица фолдов.
+\end{frame}
+
+% ------------------ 11) Анализ ошибок -----------------------
+\begin{frame}{Анализ ошибок}
+\begin{itemize}
+  \item Типичные FP: «дешёвый оригинал», редкие бренды, агрессивные аугментации.
+  \item Типичные FN: высококачественные подделки, вводящий в заблуждение текст.
+  \item Кейсы (1–2 примера): картинка + краткий разбор факторов.
+  \item Гипотезы улучшений: OCR, доп. признаки (гео/возраст аккаунта), hard-negative mining.
+\end{itemize}
+\medskip
+\textit{Визуал:} галерея 2$\times$2 (FP/FN) с подписями.
+\end{frame}
+
+% ------------------ 12) Инференс и submission ---------------
+\begin{frame}{Инференс и выпуск submission}
+\begin{itemize}
+  \item Единый запуск:
+\end{itemize}
+\begin{block}{CLI}
+\texttt{python run.py --mode infer --test\_dir data/test \textbackslash{}}\\
+\texttt{\ \ --out submission.csv --cfg config.yaml}
+\end{block}
+\begin{itemize}
+  \item Входы: пути к данным 3 модальностей; batched инференс; чекпоинты.
+  \item Выход: детерминированный \texttt{submission.csv} + логи/метаданные.
+  \item Обработка пропусков модальностей; graceful degradation; мониторинг.
+\end{itemize}
+\medskip
+\textit{Визуал:} фрагмент \texttt{submission.csv} (3–5 строк).
+\end{frame}
+
+% ------------------ 13) Инфраструктура ----------------------
+\begin{frame}{Инфраструктура и воспроизводимость}
+\begin{itemize}
+  \item Docker (CUDA/CPU), фиксированные \texttt{seed}, lock-файлы зависимостей.
+  \item Конфиги: YAML (пути, гиперпараметры, режим фьюжна), единый entrypoint.
+  \item Трекинг: MLflow/W\&B; артефакты: модели/эмбеддинги/логи.
+  \item DVC/Git LFS для данных; CI: линтеры, unit/integration, smoke-инференс.
+  \item Модель-реестр, версия API, rollback-стратегия.
+\end{itemize}
+\medskip
+\textit{Визуал:} диаграмма Dev $\to$ CI $\to$ Registry $\to$ Prod.
+\end{frame}
+
+% ------------------ 14) Риски и ограничения -----------------
+\begin{frame}{Риски, ограничения, комплаенс}
+\begin{itemize}
+  \item Сдвиг данных (сезонность, новые бренды); генерализация на редкие классы.
+  \item Качество снимков/текста; атаки (adversarial, spoofing).
+  \item Этичность и bias; интерпретируемость (SHAP, примеры).
+  \item Легальные аспекты: хранение изображений, PII, retention, аудит.
+  \item Контроль: переобучаемость по расписанию, алерты по PR-AUC/F1.
+\end{itemize}
+\medskip
+%\textit{Визуал:} таблица рисков: вероятность $\times$ влияние $\times$ меры.
+\end{frame}
+
+% ------------------ 15) Дорожная карта ----------------------
+\begin{frame}{Дорожная карта и next steps}
+\begin{itemize}
+  \item Улучшения: HPO (Bayes/ASHA), псевдолейблинг, self-training, CLIP/OCR.
+  \item Инженерия: онлайновая калибровка, микросервис/gRPC, авто-скейлинг.
+  \item Оптимизация: дистилляция, quantization/ONNX/TensorRT.
+  \item Валидация в проде: A/B, holdout-маркировка, human-in-the-loop.
+  %\item Таймлайн: этапы 2–4 недели; ответственные.
+\end{itemize}
+\medskip
+\textit{Визуал:} дорожная карта (полосы-этапы).
+\end{frame}
+
+% ------------------ Резерв / бэкап (опционально) -------------
+% \appendix
+% \begin{frame}{Дополнительные материалы}
+%   Резервные графики, таблицы, детали экспериментов.
+% \end{frame}
+
+\end{document}
