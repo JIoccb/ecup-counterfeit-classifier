@@ -17,7 +17,7 @@ from typing import Optional
 import numpy as np
 from PIL import Image
 import torch
-import subprocess
+import shutil, subprocess
 
 
 @torch.inference_mode()
@@ -70,11 +70,12 @@ def perform_ocr(img_path: str) -> str:
     Возвращает распознанный текст (str). Пустая строка при неудаче.
     """
     try:
-        out = subprocess.run(
-            ["tesseract", img_path, "-", "-l", "rus+eng"],
-            capture_output=True,
-            check=False
-        )
-        return out.stdout.decode("utf-8", errors="ignore")
+        if shutil.which("tesseract") is None:
+            return ""
+        langs = subprocess.run(["tesseract", "--list-langs"], capture_output=True).stdout.decode("utf-8", "ignore")
+        lang = "rus+eng" if "rus" in langs and "eng" in langs else ("eng" if "eng" in langs else None)
+        cmd = ["tesseract", img_path, "-"] + (["-l", lang] if lang else [])
+        out = subprocess.run(cmd, capture_output=True, check=False)
+        return out.stdout.decode("utf-8", "ignore")
     except Exception:
         return ""
