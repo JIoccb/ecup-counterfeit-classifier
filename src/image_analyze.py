@@ -1,16 +1,80 @@
+# -*- coding: utf-8 -*-
+"""
+image_analyze.py
+================
+
+Инференс по изображению для мультимодальной классификации.
+
+Функции:
+- predict(img, model, preprocess, device="cpu", pos_index=-1) -> float
+    Применяет CLIP-препроцессор и линейную «голову»; возвращает вероятность
+    положительного класса (softmax).
+- perform_ocr(img_path) -> str
+    Опционально: OCR через tesseract (ru+en), может пригодиться для фичей.
+"""
+
+from typing import Optional
 import numpy as np
 from PIL import Image
 import torch
-import os
 import subprocess
 
 
-def predict(img: Image, model, preprocess):
-    processed = preprocess(img).unsqueeze(0)
+@torch.inference_mode()
+def predict(
+        img: Image.Image,
+        model: torch.nn.Module,
+        preprocess,
+        device: str = "cpu",
+        pos_index: int = -1
+) -> Optional[float]:
+    """
+    Получить вероятность положительного класса по изображению.
 
-    with torch.no_grad():
-        return model(processed)
-    
+    Параметры
+    ---------
+    img : PIL.Image.Image
+        Входное изображение.
+    model : torch.nn.Module
+        Модель вида "CLIP + линейная голова" (см. load_clip_and_head в main.py).
+    preprocess : Callable
+        Препроцессор из `clip.load(...)`.
+    device : {"cpu","cuda"}, optional
+        Устройство инференса.
+    pos_index : int, optional
+        Индекс положительного класса в логитах (обычно -1 для второго класса).
 
-def perform_ocr(img_path: str):
-    return subprocess.run(["tesseract", img_path, "-", "-l", "rus+eng"], capture_output=True).stdout.decode("utf-8")
+    Возвращает
+    ----------
+    float | None
+        Вероятность положительного класса в [0,1] или None, если что-то пошло не так.
+    """
+    try:
+        x = preprocess(img).unsqueeze(0).to(device)
+        model = model.to(device).eval()
+        logits = model(x)  # ожидается shape (1, 2)
+        if isinstance(logits, (tuple, list)):
+            logits = logits[0]
+        probs = torch.softmax(logits, dim=-1)
+        return float(probs.squeeze(0)[pos_index].item())
+    except Exception:
+        # На случай битых изображений или несовместимых тензоров
+        return None
+
+
+def perform_ocr(img_path: str) -> str:
+    """
+    Выполнить OCR (rus+eng) для изображения по пути `img_path`.
+    Требуется установленный tesseract и языковые пакеты.
+
+    Возвращает распознанный текст (str). Пустая строка при неудаче.
+    """
+    try:
+        out = subprocess.run(
+            ["tesseract", img_path, "-", "-l", "rus+eng"],
+            capture_output=True,
+            check=False
+        )
+        return out.stdout.decode("utf-8", errors="ignore")
+    except Exception:
+        return ""
