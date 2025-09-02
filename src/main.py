@@ -37,7 +37,7 @@ class CLIPFineTuned(torch.nn.Module):
     
 model_clip, preprocess = clip.load("./image_model/ViT-B-32.pt", device="cpu")
 model_ft = CLIPFineTuned(model_clip, 2)
-model_ft.classifier.load_state_dict(torch.load("./image_model/classifier_checkpoint3.pth", weights_only=True, map_location=torch.device("cpu")))
+model_ft.classifier.load_state_dict(torch.load("./image_model/classifier_checkpoint.pth", weights_only=True, map_location=torch.device("cpu")))
 model_ft.eval()
 
 ###
