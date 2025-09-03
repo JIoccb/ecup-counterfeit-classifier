@@ -1,14 +1,12 @@
-FROM python:latest
-WORKDIR /project
+FROM python:3.10-slim
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git tesseract-ocr tesseract-ocr-rus \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install git+https://github.com/openai/CLIP.git
-RUN apt update && apt upgrade -y
-RUN apt install tesseract-ocr tesseract-ocr-rus -y
-
-COPY src ./src
-# no exposure
-# EXPOSE 5000
-
-CMD ["python", "./src/main.py"]
+COPY . .
+ENV TORCH_DISABLE_CUDA_FALLBACK=1
+CMD ["python", "-m", "src.main", "--help"]
